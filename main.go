@@ -29,7 +29,10 @@ func upload(c echo.Context) error {
 	}
 	files := form.File["files"]
 
-	for _, file := range files {
+	resStr := "<p><pre>"
+	resStr += "Upload report:\n"
+
+	for i, file := range files {
 		// FF -- For-Single-file ------------------------ ___--\\
 		src, err := file.Open()
 		if err != nil {
@@ -49,10 +52,14 @@ func upload(c echo.Context) error {
 		if _, err = io.Copy(dst, src); err != nil {
 			return err
 		}
+
+		resStr += fmt.Sprintf("File %d : ", i) + dst.Name() + " upload success!\n"
+
 		// LL __ For-Single-file ________________________ ___--//
 	}
+	resStr += "</pre></p>"
 
-	return c.HTML(http.StatusOK, fmt.Sprintf("<p>Uploaded successfully %d files with fields name=%s and email=%s.</p>", len(files), name, email))
+	return c.HTML(http.StatusOK, fmt.Sprintf(resStr+"<p>Uploaded total  %d files with fields name=%s and email=%s.</p>", len(files), name, email))
 
 }
 
