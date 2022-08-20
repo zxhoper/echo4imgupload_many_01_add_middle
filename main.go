@@ -3,16 +3,26 @@ package main
 
 import (
 	"fmt"
-	// "log"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/rwcarlsen/goexif/exif"
+	"github.com/tidwall/gjson"
 )
 
 func upload(c echo.Context) error {
+
+	var err error
+	var imgFile *os.File
+	var metaData *exif.Exif
+	var jsonByte []byte
+	var jsonString string
+
 	// Read form fields
 	name := c.FormValue("name")
 	email := c.FormValue("email")
@@ -33,7 +43,6 @@ func upload(c echo.Context) error {
 	resStr += "Upload report:\n"
 
 	for i, file := range files {
-		// FF -- For-Single-file ------------------------ ___--\\
 		src, err := file.Open()
 		if err != nil {
 			return err
@@ -53,9 +62,40 @@ func upload(c echo.Context) error {
 			return err
 		}
 
-		resStr += fmt.Sprintf("File %d : ", i) + dst.Name() + " upload success!\n"
+		resStr += fmt.Sprintf("File %d: %s OK!\n", i, dst.Name())
 
-		// LL __ For-Single-file ________________________ ___--//
+		// FF -- Parse-EXIF ------------------------ ___--\\
+
+		// imgFile, err = os.Open("sample.jpg")
+		imgFile, err = os.Open(dstFolder + file.Filename)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		metaData, err = exif.Decode(imgFile)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		jsonByte, err = metaData.MarshalJSON()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		jsonString = string(jsonByte)
+		fmt.Println(jsonString)
+
+		//"DateTimeOriginal":"2022:08:20 15:25:55"
+
+		// fmt.Println("Make: " + gjson.Get(jsonString, "Make").String())
+		// fmt.Println("Model: " + gjson.Get(jsonString, "Model").String())
+		// fmt.Println("Software: " + gjson.Get(jsonString, "Software").String())
+		// fmt.Println("DateTimeOriginal: " + gjson.Get(jsonString, "DateTimeOriginal").String())
+		fmt.Println("DateTimeOriginal: " + gjson.Get(jsonString, "DateTimeOriginal").String())
+		resStr += fmt.Sprintf("       => time: %s \n", gjson.Get(jsonString, "DateTimeOriginal").String())
+
+		// LL __ Parse-EXIF ________________________ ___--//
+
 	}
 	resStr += "</pre></p>"
 
